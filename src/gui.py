@@ -2,9 +2,12 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from routes import *
+from routeStore import *
 
 STENCIL_FONT = QFont( QFont( 'Arial', 16 ) )
 STENCIL_FONT.setBold( True )
+
+routeStore = None
 
 class WallHold( QWidget ):
     def __init__( self, row, col ):
@@ -100,9 +103,11 @@ class MainWindow(QMainWindow):
                 if w.status != HoldStatus.UNUSED:
                     route.holds.append( Hold( w.row, w.col, w.status ) )
 
+        routeStore.AddRoute( route )
         print( route )
 
 if __name__ == '__main__':
+    routeStore = RouteStore()
     app = QApplication( [] )
     window = MainWindow()
     app.exec_()
