@@ -65,3 +65,8 @@ class Route:
         s += "\t\tFinish: " + str( finishHolds ) + "\n"
 
         return s
+
+exampleStartHold1 = Hold( 5, 5, HoldStatus.START )
+exampleFinishHold1 = Hold( 18, 6, HoldStatus.FINISH )
+exampleRoute1 = Route( 'Route1', 16, [exampleStartHold1, exampleFinishHold1], 'First route!' )
+exampleRoute2 = Route( 'Route2', 17, [exampleFinishHold1], 'Woah that\'s hard.' )
