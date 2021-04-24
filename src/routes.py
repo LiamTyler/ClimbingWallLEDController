@@ -12,6 +12,21 @@ class HoldStatus( enum.IntEnum ):
     COUNT = 4
 
 
+class RouteStyle( enum.IntEnum ):
+    NONE = 0
+    JUGGY = 1
+    CRIMPY = 2
+    SLOPEY = 3
+    DYNAMIC = 4
+    COMPRESSION = 5
+
+    COUNT = 6
+
+def RouteStyleToString( style ):
+    names = [ "NONE", "JUGGY", "CRIMPY", "SLOPEY", "DYNAMIC", "COMPRESSION" ]
+    return names[int(style)]
+
+
 class Hold:
     def __init__( self, row, col, status ):
         self.row = row
@@ -38,11 +53,14 @@ class Hold:
 
 
 class Route:
-    def __init__( self, name, difficulty = -1, holds = [], notes = "" ):
+    def __init__( self, name, difficulty=0, holds=[], notes="", rating=0, style=RouteStyle.NONE, tags=[] ):
       self.name = name
       self.difficulty = difficulty
       self.holds = holds
       self.notes = notes
+      self.rating = rating
+      self.style = style
+      self.tags = tags
 
     def __str__( self ):
         s = self.name + ": V" + str( self.difficulty ) + "\n"
@@ -66,7 +84,7 @@ class Route:
 
         return s
 
-exampleStartHold1 = Hold( 5, 5, HoldStatus.START )
-exampleFinishHold1 = Hold( 18, 6, HoldStatus.FINISH )
-exampleRoute1 = Route( 'Route1', 16, [exampleStartHold1, exampleFinishHold1], 'First route!' )
-exampleRoute2 = Route( 'Route2', 17, [exampleFinishHold1], 'Woah that\'s hard.' )
+#exampleStartHold1 = Hold( 5, 5, HoldStatus.START )
+#exampleFinishHold1 = Hold( 18, 6, HoldStatus.FINISH )
+#exampleRoute1 = Route( 'Route1', 16, [exampleStartHold1, exampleFinishHold1], 'First route!' )
+#exampleRoute2 = Route( 'Route2', 17, [exampleFinishHold1], 'Woah that\'s hard.' )
