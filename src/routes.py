@@ -1,7 +1,9 @@
 import enum
 
-WALL_ROWS = 18
-WALL_COLS = 11
+#WALL_ROWS = 18
+#WALL_COLS = 11
+WALL_ROWS=10
+WALL_COLS=5
 
 class HoldStatus( enum.IntEnum ):
     UNUSED = 0
@@ -43,7 +45,7 @@ class Hold:
         return coord
     
     def GetStrCoord( self ):
-        return chr( 64 + self.col ) + str( self.row )
+        return chr( 65 + self.col ) + str( self.row + 1 )
 
     def __str__( self ):
         return self.GetStrCoord()
@@ -83,8 +85,3 @@ class Route:
         s += "\t\tFinish: " + str( finishHolds ) + "\n"
 
         return s
-
-#exampleStartHold1 = Hold( 5, 5, HoldStatus.START )
-#exampleFinishHold1 = Hold( 18, 6, HoldStatus.FINISH )
-#exampleRoute1 = Route( 'Route1', 16, [exampleStartHold1, exampleFinishHold1], 'First route!' )
-#exampleRoute2 = Route( 'Route2', 17, [exampleFinishHold1], 'Woah that\'s hard.' )
