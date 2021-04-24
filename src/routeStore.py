@@ -7,14 +7,16 @@ class RouteStore:
         self.fileLocation = storeLocation
         self.LoadRouteStore()
 
-    def UpdateRouteStore( self ):
+    def _UpdateRouteStore( self ):
         pickle.dump( self.routes, open( self.fileLocation, 'wb' ) )
 
     def LoadRouteStore( self ):
-        if os.path.isfile(self.fileLocation):
-            self.routes = pickle.load( open( self.fileLocation, 'rb') )
-        else:
+        try:
+            with open( self.fileLocation, "rb" ) as file:
+                self.routes = pickle.load( file )
+        except:
             self.routes = []
+        self.routes = [] # for testing purposes right now
 
     def AddRoute( self, route ):
         names = list( map( lambda r: r.name, self.routes ) )
@@ -22,7 +24,7 @@ class RouteStore:
             raise Exception( 'Route name already exists' )
         else:
             self.routes.append( route )
-            self.UpdateRouteStore()
+            self._UpdateRouteStore()
 
     def GetRouteByName( self, name ):
         for route in self.routes:
@@ -32,3 +34,6 @@ class RouteStore:
 
     def GetRoutesByDifficulty( self, difficulty ):
         return list( filter( lambda r: r.difficulty == difficulty, self.routes ) )
+
+    def GetAllRoutes( self ):
+        return self.routes
