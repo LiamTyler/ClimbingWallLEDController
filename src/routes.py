@@ -55,7 +55,7 @@ class Hold:
 
 
 class Route:
-    def __init__( self, name, difficulty=0, holds=[], notes="", rating=0, style=RouteStyle.NONE, tags=[] ):
+    def __init__( self, name, difficulty=0, rating=0, style=RouteStyle.NONE, tags=[], holds=[], notes="" ):
       self.name = name
       self.difficulty = difficulty
       self.holds = holds
@@ -79,9 +79,9 @@ class Route:
             elif hold.status == HoldStatus.FINISH:
                 finishHolds.append( hold )
         
-        s += "\tHolds: "
+        s += "\tHolds:\n"
         s += "\t\tStart: " + str( startHolds ) + "\n"
         s += "\t\tRegular: " + str( regularHolds ) + "\n"
-        s += "\t\tFinish: " + str( finishHolds ) + "\n"
+        s += "\t\tFinish: " + str( finishHolds )
 
         return s

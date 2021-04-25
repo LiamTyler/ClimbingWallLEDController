@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from routes import *
 from routeStore import *
+from lights import *
 
 STENCIL_FONT = QFont( QFont( 'Arial', 16 ) )
 STENCIL_FONT.setBold( True )
@@ -58,7 +59,7 @@ class WallStencil( QWidget ):
         qp.drawText( event.rect(), Qt.AlignCenter, self.text )
         
 
-class DisplayRoute( QListWidgetItem ):
+class RouteListItem( QListWidgetItem ):
     def __init__( self, route ):
         super().__init__()
         self.route = route
@@ -69,9 +70,6 @@ class DisplayRoute( QListWidgetItem ):
         self.setText( showString )
         self.setFont( STENCIL_FONT )
 
-    #def on_change( self, state ):
-    #    super().setCheckState( state )
-    #    print( state )
 
 class MainWindow( QMainWindow ):
     def __init__( self ):
@@ -91,15 +89,19 @@ class MainWindow( QMainWindow ):
         for i in reversed( range( self._verticalLayout.count() ) ): 
             self._verticalLayout.itemAt( i ).widget().setParent( None )
 
+    def ViewRoutePage( self, dispRoute ):
+        print( dispRoute.route )
+        LED_DisplayRoute( dispRoute.route )
+
     def MainMenu( self ):
         self._clearLayout()
         vlist = QListWidget( self )
         routes = routeStore.GetAllRoutes()
         for route in routes:
-            vlist.addItem( DisplayRoute( route ) )
-
+            vlist.addItem( RouteListItem( route ) )
         scrollBar = QScrollBar()
         vlist.setVerticalScrollBar( scrollBar )
+        vlist.itemClicked.connect( self.ViewRoutePage )
 
         addRouteButton = QPushButton( self )
         addRouteButton.setText( "Add Route" )
@@ -146,12 +148,30 @@ class MainWindow( QMainWindow ):
         routeStore.AddRoute( route )
         print( route )
 
+
+# For ease of test route creation
+def Hold_S( str ):
+    return Hold( int( str[1:] ) - 1, ord( str[0] ) - 65, HoldStatus.START )
+
+def Hold_R( str ):
+    return Hold( int( str[1:] ) - 1, ord( str[0] ) - 65, HoldStatus.REGULAR )
+
+def Hold_F( str ):
+    return Hold( int( str[1:] ) - 1, ord( str[0] ) - 65, HoldStatus.FINISH )
+
 if __name__ == '__main__':
+    LED_InitializeController()
     routeStore = RouteStore()
-    routeStore.AddRoute( Route( "Route 1", 5 ) )
-    routeStore.AddRoute( Route( "Route 2", 3 ) )
-    routeStore.AddRoute( Route( "Route 3", 4 ) )
-    routeStore.AddRoute( Route( "Route 4", 1 ) )
+    route1 = Route( "Route 1", 5, 4, RouteStyle.SLOPEY )
+    route1.holds = [ Hold_S( "A1" ), Hold_S( "B3" ), Hold_R( "C6" ), Hold_R( "D7" ), Hold_F( "E9" ) ]
+    route2 = Route( "Route 2", 3, 5, RouteStyle.CRIMPY )
+    route2.holds = [ Hold_S( "A3" ), Hold_S( "B4" ), Hold_R( "B8" ), Hold_F( "C9" ) ]
+    route3 = Route( "Route 3", 4, 2, RouteStyle.JUGGY )
+    route3.holds = [ Hold_S( "E3" ), Hold_S( "D3" ), Hold_R( "D6" ), Hold_R( "C6" ), Hold_F( "B9" ) ]
+    
+    routeStore.AddRoute( route1 )
+    routeStore.AddRoute( route2 )
+    routeStore.AddRoute( route3 )
     app = QApplication( [] )
     window = MainWindow()
     app.exec_()

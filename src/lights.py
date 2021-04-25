@@ -1,19 +1,25 @@
-import board
-import neopixel
 from routes import *
+try:
+    import board
+    import neopixel
+    g_IsRunningOnRaspberryPi = True
+except:
+    g_IsRunningOnRaspberryPi = False
 
-PIXEL_PIN = board.D18
-ORDER = neopixel.GRB
+g_ledPixels = None
 
-pixels = None
+def LED_InitializeController():
+    global g_ledPixels
+    if g_IsRunningOnRaspberryPi:
+        g_ledPixels = neopixel.NeoPixel( board.D18, WALL_COLS * WALL_ROWS, brightness=0.5, auto_write=False, pixel_order=neopixel.GRB )
 
-def DisplayRoute( route ):
-    global pixels
-    if pixels == None:
-        pixels = neopixel.NeoPixel(
-            PIXEL_PIN, WALL_COLS * WALL_ROWS, brightness=0.5, auto_write=False, pixel_order=ORDER
-        )
-    pixels.fill((0,0,0))
+
+def LED_DisplayRoute( route ):
+    if not g_ledPixels:
+        print( "Can't display route because not connected to LEDs" )
+        return
+    
+    g_ledPixels.fill((0,0,0))
     for hold in route.holds:
         if hold.status == HoldStatus.START:
             color = (255, 0, 0)
@@ -23,6 +29,5 @@ def DisplayRoute( route ):
             color = (0, 255, 0)
         else:
             color = (0, 0, 0)
-        pixels[hold.GetLEDCoord()] = color
-    pixels.show()
-
+        g_ledPixels[hold.GetLEDCoord()] = color
+    g_ledPixels.show()
