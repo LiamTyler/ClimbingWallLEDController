@@ -55,14 +55,14 @@ class Hold:
 
 
 class Route:
-    def __init__( self, name, difficulty=0, rating=0, style=RouteStyle.NONE, tags=[], holds=[], notes="" ):
+    def __init__( self, name=None, difficulty=0, rating=0, style=RouteStyle.NONE, tags=None, notes=""):
       self.name = name
       self.difficulty = difficulty
-      self.holds = holds
+      self.holds = []
       self.notes = notes
       self.rating = rating
       self.style = style
-      self.tags = tags
+      self.tags = tags if tags != None else []
 
     def __str__( self ):
         s = self.name + ": V" + str( self.difficulty ) + "\n"

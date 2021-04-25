@@ -62,7 +62,6 @@ class WallStencil( QWidget ):
 class RouteListItem( QListWidgetItem ):
     def __init__( self, route ):
         super().__init__()
-        self.route = route
         showString = route.name + ": V" + str( route.difficulty ) + "\n    "
         if route.style != RouteStyle.NONE:
             showString += "Style: " + RouteStyleToString( route.style )
@@ -70,6 +69,21 @@ class RouteListItem( QListWidgetItem ):
         self.setText( showString )
         self.setFont( STENCIL_FONT )
 
+class CustomDialog(QDialog):
+    def __init__(self, title, msg, parent=None):
+        super().__init__(parent=parent)
+
+        self.setWindowTitle( title )
+        QBtn = QDialogButtonBox.Ok
+
+        self.buttonBox = QDialogButtonBox( QBtn )
+        self.buttonBox.accepted.connect( self.accept )
+
+        self.layout = QVBoxLayout()
+        message = QLabel( msg )
+        self.layout.addWidget( message )
+        self.layout.addWidget( self.buttonBox )
+        self.setLayout( self.layout )
 
 class MainWindow( QMainWindow ):
     def __init__( self ):
@@ -85,16 +99,21 @@ class MainWindow( QMainWindow ):
         self.MainMenu()
         self.show()
 
-    def _clearLayout( self ):
-        for i in reversed( range( self._verticalLayout.count() ) ): 
-            self._verticalLayout.itemAt( i ).widget().setParent( None )
+    def _clearLayout( self, layout):
+        for i in reversed( range( layout.count() ) ): 
+            item = layout.itemAt( i )
+            widget = item.widget()
+            if widget:
+                widget.setParent( None )
+            else:
+                self._clearLayout( item.layout() )
 
     def ViewRoutePage( self, dispRoute ):
         print( dispRoute.route )
         LED_DisplayRoute( dispRoute.route )
 
     def MainMenu( self ):
-        self._clearLayout()
+        self._clearLayout( self._verticalLayout )
         vlist = QListWidget( self )
         routes = routeStore.GetAllRoutes()
         for route in routes:
@@ -106,12 +125,13 @@ class MainWindow( QMainWindow ):
         addRouteButton = QPushButton( self )
         addRouteButton.setText( "Add Route" )
         addRouteButton.setStyleSheet("background-color : white")
-        addRouteButton.clicked.connect( self.AddRoutePage )
+        addRouteButton.clicked.connect( lambda: self.AddRoutePage() )
         self._verticalLayout.addWidget( vlist )
         self._verticalLayout.addWidget( addRouteButton )
 
-    def AddRoutePage( self ):
-        self._clearLayout()
+    def AddRoutePage( self, route=None ):
+        route = route if route != None else Route()
+        self._clearLayout( self._verticalLayout )
         self.grid = QGridLayout()
         self.grid.setSpacing( 5 )
 
@@ -126,28 +146,91 @@ class MainWindow( QMainWindow ):
                     w = WallStencil( chr( 65 + col - 1 ) )
                 elif row > 0 and col > 0:
                     w = WallHold( wallRow, col )
-                
+                    for hold in route.holds:
+                        if ( WALL_ROWS - hold.row + 1 ) == row and hold.col == col:
+                            w.status = hold.status
                 if w != None:
                     self.grid.addWidget( w, row, col )
         
         addRouteButton = QPushButton( self )
-        addRouteButton.setText( "Add Route" )
+        addRouteButton.setText( "Continue" )
         addRouteButton.setStyleSheet( "background-color : white" )
-        addRouteButton.clicked.connect( self.AddRoute )
-        self._verticalLayout.addLayout( self.grid )
-        self._verticalLayout.addWidget( addRouteButton )
+        addRouteButton.clicked.connect( lambda: self.AddRoute( route ) )
 
-    def AddRoute( self ):
-        route = Route( "Test", 0 )
+        backButton = QPushButton ( self )
+        backButton.setText( "Back" )
+        backButton.setStyleSheet( "background-color : white" )
+        backButton.clicked.connect( self.MainMenu )
+
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget( backButton )
+        buttonLayout.addWidget( addRouteButton )
+        self._verticalLayout.addLayout( self.grid )
+        self._verticalLayout.addLayout( buttonLayout )
+
+    def AddRoute( self, route ):
         for row in range( 1, WALL_ROWS + 1 ):
             for col in range( 1, WALL_COLS + 1 ):
                 w = self.grid.itemAtPosition( row, col ).widget()
                 if w.status != HoldStatus.UNUSED:
                     route.holds.append( Hold( w.row, w.col, w.status ) )
 
-        routeStore.AddRoute( route )
-        print( route )
+        self.AddRoutePageTwo( route )
 
+    def AddRoutePageTwo( self, route ):
+        self._clearLayout( self._verticalLayout )
+        vlist = QListWidget( self )
+
+        formLayout = QFormLayout()
+        self.routeNameInput = QLineEdit( route.name )
+        formLayout.addRow( QLabel( "Route Name:" ), self.routeNameInput )
+        self.routeDifficultyInput = QComboBox()
+        self.routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
+        self.routeDifficultyInput.setCurrentText( str( route.difficulty ) )
+        formLayout.addRow( QLabel( "Difficulty:" ), self.routeDifficultyInput )
+        self.routeStyleInput = QComboBox()
+        self.routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
+        self.routeStyleInput.setCurrentText( route.style.name )
+        formLayout.addRow( QLabel( "Route Style:" ), self.routeStyleInput )
+        self.routeRatingInput = QComboBox()
+        self.routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
+        self.routeRatingInput.setCurrentText( str( route.rating ) )
+        formLayout.addRow( QLabel( "Rating:" ), self.routeRatingInput )
+        self.routeNotesInput = QLineEdit( route.notes )
+        formLayout.addRow( QLabel( "Notes:" ), self.routeNotesInput )
+        self.routeTagsInput = QLineEdit( ", ".join( route.tags ) )
+        formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), self.routeTagsInput )
+        self._verticalLayout.addLayout( formLayout )
+
+        buttonLayout = QHBoxLayout()
+        backButton = QPushButton()
+        backButton.setText( "Back" )
+        def setDetailsAndGoBack():
+            self.SetRouteDetails( route )
+            self.AddRoutePage( route )
+        backButton.clicked.connect( setDetailsAndGoBack )
+        buttonLayout.addWidget( backButton )
+        createRouteButton = QPushButton()
+        createRouteButton.setText( "Create Route" )
+        def setDetailsAndCreateRoute():
+            self.SetRouteDetails( route )
+            try:
+                routeStore.AddRoute( route )
+                self.MainMenu()
+            except Exception as err:
+                errorDialog = CustomDialog( "Exception Occurred", "Failed to create route: " + err.args[0] )
+                errorDialog.exec_()
+        createRouteButton.clicked.connect( setDetailsAndCreateRoute )
+        buttonLayout.addWidget( createRouteButton )
+        self._verticalLayout.addLayout( buttonLayout )
+
+    def SetRouteDetails( self, route ):
+        route.name = self.routeNameInput.text()
+        route.difficulty = int( self.routeDifficultyInput.currentText() )
+        route.style = RouteStyle[ self.routeStyleInput.currentText() ]
+        route.rating = int( self.routeRatingInput.currentText() )
+        route.notes = self.routeNotesInput.text()
+        route.tags = list( map( lambda s: s.strip().lower(), self.routeTagsInput.text().split( ',' ) ) )
 
 # For ease of test route creation
 def Hold_S( str ):
