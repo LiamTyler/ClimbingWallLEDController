@@ -13,15 +13,16 @@ WINDOW_SIZE = (600, 800)
 routeStore = None
 
 class WallHold( QWidget ):
-    def __init__( self, row, col ):
+    def __init__( self, row, col, editable = False ):
         super().__init__()
         self.setFixedSize( QSize( 40, 40 ) )
         self.row = row
         self.col = col
         self.status = HoldStatus.UNUSED
+        self.editable = editable
 
     def GetCoord( self ):
-        return chr( 64 + self.col ) + str( self.row )
+        return chr( 65 + self.col ) + str( self.row + 1 )
     
     def paintEvent( self, event ):
         p = QPainter( self )
@@ -41,8 +42,9 @@ class WallHold( QWidget ):
         p.drawRect( rect )
 
     def mouseReleaseEvent( self, e ):
-        self.status = (self.status + 1) % HoldStatus.COUNT
-        self.update()
+        if self.editable:
+            self.status = (self.status + 1) % HoldStatus.COUNT
+            self.update()
 
 
 class WallStencil( QWidget ):
@@ -57,11 +59,36 @@ class WallStencil( QWidget ):
         qp.setPen( Qt.black )
         qp.setFont( STENCIL_FONT )
         qp.drawText( event.rect(), Qt.AlignCenter, self.text )
-        
+
+
+class WallWidget( QWidget ):
+    def __init__( self, editable ):
+        super().__init__()
+        self.editable = editable
+        layout = QGridLayout()
+        self.setLayout( layout )
+        self.setSizePolicy( QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed )
+        #self.setSpacing( 5 )
+        # grid starts in upper left corner, but wall starts in lower left
+        for row in range( 0, WALL_ROWS + 1 ):
+            for col in range( 0, WALL_COLS + 1 ):
+                wallRow = WALL_ROWS - row
+                w = None
+                if row > 0 and col == 0:
+                    w = WallStencil( str( wallRow + 1 ) )
+                elif row == 0 and col > 0:
+                    w = WallStencil( chr( 65 + col - 1 ) )
+                elif row > 0 and col > 0:
+                    w = WallHold( wallRow, col, editable )
+                
+                if w != None:
+                    layout.addWidget( w, row, col )
+
 
 class RouteListItem( QListWidgetItem ):
     def __init__( self, route ):
         super().__init__()
+        self.route = route
         showString = route.name + ": V" + str( route.difficulty ) + "\n    "
         if route.style != RouteStyle.NONE:
             showString += "Style: " + RouteStyleToString( route.style )
@@ -69,9 +96,10 @@ class RouteListItem( QListWidgetItem ):
         self.setText( showString )
         self.setFont( STENCIL_FONT )
 
-class CustomDialog(QDialog):
-    def __init__(self, title, msg, parent=None):
-        super().__init__(parent=parent)
+
+class CustomDialog( QDialog ):
+    def __init__( self, title, msg, parent=None ):
+        super().__init__( parent=parent )
 
         self.setWindowTitle( title )
         QBtn = QDialogButtonBox.Ok
@@ -85,32 +113,118 @@ class CustomDialog(QDialog):
         self.layout.addWidget( self.buttonBox )
         self.setLayout( self.layout )
 
+
+class MainRouteViewer( QWidget ):
+    def __init__( self, route, returnToMainMenuFunc ):
+        super().__init__()
+        self.route = route
+        buttons = QWidget()
+        vbox = QVBoxLayout()
+        buttons.setLayout( vbox )
+        vbox.setSpacing( 20 )
+        #buttons.setStyleSheet( "border: 1px solid red; background-color: #292929" )
+        buttons.setStyleSheet( "background-color: #292929" )
+        backButton = QPushButton()
+        backButton.setStyleSheet( "background-color: #FFFFFF" )
+        backButton.setIcon( QIcon( "../icons/left-arrow.svg" ) )
+        backButton.clicked.connect( returnToMainMenuFunc )
+        detailsButton = QPushButton()
+        detailsButton.setStyleSheet( "background-color: #FFFFFF" )
+        detailsButton.setIcon( QIcon( "../icons/details.svg" ) )
+        detailsButton.clicked.connect( lambda: self.ChangePage( 1 ) )
+        editButton = QPushButton()
+        editButton.setStyleSheet( "background-color: #FFFFFF" )
+        editButton.setIcon( QIcon( "../icons/edit.svg" ) )
+        editButton.clicked.connect( lambda: self.ChangePage( 2 ) )
+        trashButton = QPushButton()
+        trashButton.setStyleSheet( "background-color: #FFFFFF" )
+        trashButton.setIcon( QIcon( "../icons/trash_2.svg" ) )
+        trashButton.clicked.connect( lambda: self.ChangePage( 3 ) )
+        
+        vbox.addWidget( backButton )
+        vbox.addWidget( detailsButton )
+        vbox.addWidget( editButton )
+        vbox.addWidget( trashButton )
+        vbox.setAlignment( Qt.AlignTop )
+
+        self.viewRoutePage = QWidget()
+        self.detailsPage = QWidget()
+        self.editRoutePage = QWidget()
+        self.deleteRoutePage = QWidget()
+        self.SetupViewPage()
+        self.SetupDetailsPage()
+        self.SetupEditPage()
+        self.SetupDeletePage()
+
+        self.stack = QStackedWidget( self )
+        self.stack.addWidget( self.viewRoutePage )
+        self.stack.addWidget( self.detailsPage )
+        self.stack.addWidget( self.editRoutePage )
+        self.stack.addWidget( self.deleteRoutePage )
+
+        hbox = QHBoxLayout( self )
+        hbox.addWidget( buttons )
+        hbox.addWidget( self.stack )
+        hbox.setSpacing( 0 )
+        self.setLayout( hbox )
+    
+    def SetupViewPage( self ):
+        layout = QVBoxLayout()
+        layout.setAlignment( Qt.AlignCenter )
+        layout.addWidget( QLabel( "View Route Page" ) )
+        self.viewRoutePage.setLayout( layout )
+
+    def SetupDetailsPage( self ):
+        layout = QVBoxLayout()
+        layout.setAlignment( Qt.AlignCenter )
+        layout.addWidget( QLabel( "Route Details Page" ) )
+        self.detailsPage.setLayout( layout )
+
+    def SetupEditPage( self ):
+        layout = QVBoxLayout()
+        layout.setAlignment( Qt.AlignCenter )
+        layout.addWidget( QLabel( "Edit Route Page" ) )
+        self.editRoutePage.setLayout( layout )
+
+    def SetupDeletePage( self ):
+        layout = QVBoxLayout()
+        layout.setAlignment( Qt.AlignCenter )
+        layout.addWidget( QLabel( "Delete Route Page" ) )
+        self.deleteRoutePage.setLayout( layout )
+	
+    def ChangePage( self,i ):
+        self.stack.setCurrentIndex( i )
+
+
 class MainWindow( QMainWindow ):
     def __init__( self ):
         super( MainWindow, self ).__init__()
         self.setWindowTitle( "Home Wall App" )
         self.resize( WINDOW_SIZE[0], WINDOW_SIZE[1] )
         self.setStyleSheet( "background-color: lightGray;" )
-        self._centralWidget = QWidget()
+        self._centralWidget = QWidget( self )
         self.setCentralWidget( self._centralWidget )
         self._verticalLayout = QVBoxLayout()
         self._centralWidget.setLayout( self._verticalLayout )
-        
+        self._centralWidget.setSizePolicy( QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed )
         self.MainMenu()
         self.show()
 
-    def _clearLayout( self, layout):
-        for i in reversed( range( layout.count() ) ): 
-            item = layout.itemAt( i )
-            widget = item.widget()
-            if widget:
-                widget.setParent( None )
-            else:
-                self._clearLayout( item.layout() )
+    def _clearLayout( self, layout ):
+        if layout is not None:
+            for i in reversed( range( layout.count() ) ): 
+                item = layout.itemAt( i )
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+                else:
+                    self._clearLayout( item.layout() )
 
     def ViewRoutePage( self, dispRoute ):
-        print( dispRoute.route )
+        self._clearLayout( self._verticalLayout )
         LED_DisplayRoute( dispRoute.route )
+        routeViewer = MainRouteViewer( dispRoute.route, self.MainMenu )
+        self._verticalLayout.addWidget( routeViewer )
 
     def MainMenu( self ):
         self._clearLayout( self._verticalLayout )
@@ -125,7 +239,7 @@ class MainWindow( QMainWindow ):
         addRouteButton = QPushButton( self )
         addRouteButton.setText( "Add Route" )
         addRouteButton.setStyleSheet("background-color : white")
-        addRouteButton.clicked.connect( lambda: self.AddRoutePage() )
+        addRouteButton.clicked.connect( lambda: self.AddRoutePage )
         self._verticalLayout.addWidget( vlist )
         self._verticalLayout.addWidget( addRouteButton )
 
@@ -145,7 +259,7 @@ class MainWindow( QMainWindow ):
                 elif row == 0 and col > 0:
                     w = WallStencil( chr( 65 + col - 1 ) )
                 elif row > 0 and col > 0:
-                    w = WallHold( wallRow, col )
+                    w = WallHold( wallRow, col, True )
                     for hold in route.holds:
                         if ( WALL_ROWS - hold.row + 1 ) == row and hold.col == col:
                             w.status = hold.status
@@ -231,6 +345,7 @@ class MainWindow( QMainWindow ):
         route.rating = int( self.routeRatingInput.currentText() )
         route.notes = self.routeNotesInput.text()
         route.tags = list( map( lambda s: s.strip().lower(), self.routeTagsInput.text().split( ',' ) ) )
+
 
 # For ease of test route creation
 def Hold_S( str ):
