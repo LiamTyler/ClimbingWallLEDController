@@ -79,7 +79,7 @@ class WallWidget( QWidget ):
                 elif row == 0 and col > 0:
                     w = WallStencil( chr( 65 + col - 1 ) )
                 elif row > 0 and col > 0:
-                    w = WallHold( wallRow, col, False )
+                    w = WallHold( wallRow, col - 1, False )
                 
                 if w != None:
                     self.gridLayout.addWidget( w, row, col )
@@ -94,7 +94,8 @@ class WallWidget( QWidget ):
             for col in range( 0, WALL_COLS ):
                 self.gridLayout.itemAtPosition( row + 1, col + 1 ).widget().status = HoldStatus.UNUSED
         for hold in route.holds:
-            self.gridLayout.itemAtPosition( hold.row + 1, hold.col + 1 ).widget().status = hold.status
+            wallRow = WALL_ROWS - hold.row
+            self.gridLayout.itemAtPosition( wallRow, hold.col + 1 ).widget().status = hold.status
 
     def GetCurrentlyDrawnHolds( self ):
         holds = []
@@ -140,6 +141,7 @@ class MainRouteViewer( QWidget ):
         super().__init__()
         self.route = route
         self.mainWindow = mainWindow
+        self.viewWall = None # must be updated whenever route is edited
         mainWindow.setWindowTitle( "Route: " + route.name )
         vbox = QVBoxLayout()
         vbox.setAlignment( Qt.AlignTop )
@@ -187,10 +189,11 @@ class MainRouteViewer( QWidget ):
     
     def SetupViewPage( self ):
         layout = QVBoxLayout()
-        wall = WallWidget()
-        wall.SetEditable( False )
-        wall.DrawRoute( self.route )
-        layout.addWidget( wall )
+        layout.setAlignment( Qt.AlignCenter )
+        self.viewWall = WallWidget()
+        self.viewWall.SetEditable( False )
+        self.viewWall.DrawRoute( self.route )
+        layout.addWidget( self.viewWall )
         self.viewRoutePage.setLayout( layout )
 
     def SetupDetailsPage( self ):
@@ -202,7 +205,20 @@ class MainRouteViewer( QWidget ):
     def SetupEditPage( self ):
         layout = QVBoxLayout()
         layout.setAlignment( Qt.AlignCenter )
-        layout.addWidget( QLabel( "Edit Route Page" ) )
+        wall = WallWidget()
+        wall.SetEditable( True )
+        wall.DrawRoute( self.route )
+
+        hbox = QHBoxLayout()
+        backButton = QPushButton( "Back" )
+        backButton.clicked.connect( lambda: self.ChangePage( 0 ) )
+        saveButton = QPushButton( "Save Changes" )
+        saveButton.clicked.connect( lambda: self.SaveRouteChanges( wall ) )
+        hbox.addWidget( backButton )
+        hbox.addWidget( saveButton )
+        layout.addWidget( wall )
+        layout.addLayout( hbox )
+        
         self.editRoutePage.setLayout( layout )
 
     def SetupDeletePage( self ):
@@ -220,6 +236,13 @@ class MainRouteViewer( QWidget ):
         hbox.addWidget( noButton )
         vbox.addLayout( hbox )
         self.deleteRoutePage.setLayout( vbox )
+
+    def SaveRouteChanges( self, editWall ):
+        # This route actually is a reference to actual stored route, so we just need to resave the DB
+        self.route.holds = editWall.GetCurrentlyDrawnHolds()
+        routeStore._UpdateRouteStore()
+        self.viewWall.DrawRoute( self.route )
+        self.ChangePage( 0 )
 	
     def ChangePage( self,i ):
         #self.buttons[self.stack.currentIndex() + 1].setChecked( False )
