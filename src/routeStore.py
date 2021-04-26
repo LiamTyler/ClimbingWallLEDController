@@ -26,6 +26,13 @@ class RouteStore:
             self.routes.append( route )
             self._UpdateRouteStore()
 
+    def DeleteRoute( self, route ):
+        numRoutes = len( self.routes )
+        for i in range( numRoutes ):
+            if route.name == self.routes[i].name:
+                self.routes = self.routes[0:i] + self.routes[i+1:]
+                break
+
     def GetRouteByName( self, name ):
         for route in self.routes:
             if route.name == name:
