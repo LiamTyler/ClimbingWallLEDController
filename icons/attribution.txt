@@ -2,4 +2,5 @@ left-arrow.svg: https://www.flaticon.com/authors/those-icons
 edit.svg: https://www.flaticon.com/authors/kirill-kazachek
 trash.svg: https://www.flaticon.com/authors/kiranshastry
 trash_2.svg: https://www.flaticon.com/authors/dmitri13
-details.svg: https://www.flaticon.com/authors/freepik
+details.svg and paper.svg: https://www.flaticon.com/authors/freepik
+magnify.svg: https://www.flaticon.com/authors/pixel-perfect

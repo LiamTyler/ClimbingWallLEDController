@@ -187,8 +187,10 @@ class MainRouteViewer( QWidget ):
     
     def SetupViewPage( self ):
         layout = QVBoxLayout()
-        layout.setAlignment( Qt.AlignCenter )
-        layout.addWidget( QLabel( "View Route Page" ) )
+        wall = WallWidget()
+        wall.SetEditable( False )
+        wall.DrawRoute( self.route )
+        layout.addWidget( wall )
         self.viewRoutePage.setLayout( layout )
 
     def SetupDetailsPage( self ):
