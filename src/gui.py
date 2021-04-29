@@ -286,6 +286,10 @@ class MainWindow( QMainWindow ):
         routeViewer = MainRouteViewer( dispRoute.route, self )
         self._verticalLayout.addWidget( routeViewer )
 
+    def CreateRoutePage( self ):
+        self._clearLayout( self._verticalLayout )
+        self._verticalLayout.addWidget( CreateRouteView( self ) )
+
     def MainMenu( self ):
         self.setWindowTitle( "Home Wall App" )
         self._clearLayout( self._verticalLayout )
@@ -301,89 +305,125 @@ class MainWindow( QMainWindow ):
         addRouteButton = QPushButton( self )
         addRouteButton.setText( "Add Route" )
         addRouteButton.setStyleSheet("background-color : white")
-        addRouteButton.clicked.connect( lambda: self.AddRoutePage() )
+        addRouteButton.clicked.connect( self.CreateRoutePage )
         self._verticalLayout.addWidget( vlist )
         self._verticalLayout.addWidget( addRouteButton )
 
-    def AddRoutePage( self ):
-        self._clearLayout( self._verticalLayout )
+# TODO: Disallow invalid routes (0 holds, no starts, no finish, etc)
+class CreateRouteView( QWidget ):
+    def __init__( self, mainWindow ):
+        super().__init__()
+        self.mainWindow = mainWindow
+        self.mainWindow.setWindowTitle( "Create Route" )
+
+        self.route = Route()
+        self.stack = QStackedWidget()
+        self.stack.addWidget( self.SetupAddHoldsPage() )
+        self.stack.addWidget( self.SetupAddDetailsPage() )
+        self.stack.setCurrentIndex( 0 )
+
+        vbox = QVBoxLayout()
+        vbox.addWidget( self.stack )
+        self.setLayout ( vbox )
+    
+    def SetupAddHoldsPage( self ):
         wall = WallWidget()
         wall.SetEditable( True )
+        wall.DrawRoute( self.route )
+
+        wallBox = QVBoxLayout()
+        wallBox.setAlignment( Qt.AlignCenter )
+        wallBox.addWidget( wall )
         
-        addRouteButton = QPushButton( self )
-        addRouteButton.setText( "Continue" )
-        addRouteButton.setStyleSheet( "background-color : white" )
-        addRouteButton.clicked.connect( lambda: self.AddRoute( wall.GetCurrentlyDrawnHolds() ) )
+        def getHoldsAndContinue():
+            self.route.holds = wall.GetCurrentlyDrawnHolds()
+            self.stack.setCurrentIndex( 1 )
+        continueButton = QPushButton( self )
+        continueButton.setText( "Continue" )
+        continueButton.setStyleSheet( "background-color : white" )
+        continueButton.clicked.connect( lambda: getHoldsAndContinue() )
 
         backButton = QPushButton ( self )
         backButton.setText( "Back" )
         backButton.setStyleSheet( "background-color : white" )
-        backButton.clicked.connect( self.MainMenu )
+        backButton.clicked.connect( self.mainWindow.MainMenu )
 
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget( backButton )
-        buttonLayout.addWidget( addRouteButton )
-        self._verticalLayout.addWidget( wall )
-        self._verticalLayout.addLayout( buttonLayout )
+        buttonLayout.addWidget( continueButton )
 
-    # TODO: Disallow invalid routes (0 holds, no starts, no finish, etc)
-    def AddRoute( self, holds ):
-        route = Route()
-        route.holds = holds
-        self._clearLayout( self._verticalLayout )
-        vlist = QListWidget( self )
+        vbox = QVBoxLayout()
+        vbox.addLayout( wallBox )
+        vbox.addLayout( buttonLayout )
+        w = QWidget()
+        w.setLayout( vbox )
+        return w
+
+    def SetupAddDetailsPage( self ):
+        vbox = QVBoxLayout()
 
         formLayout = QFormLayout()
-        self.routeNameInput = QLineEdit( route.name )
-        formLayout.addRow( QLabel( "Route Name:" ), self.routeNameInput )
-        self.routeDifficultyInput = QComboBox()
-        self.routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
-        self.routeDifficultyInput.setCurrentText( str( route.difficulty ) )
-        formLayout.addRow( QLabel( "Difficulty:" ), self.routeDifficultyInput )
-        self.routeStyleInput = QComboBox()
-        self.routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
-        self.routeStyleInput.setCurrentText( route.style.name )
-        formLayout.addRow( QLabel( "Route Style:" ), self.routeStyleInput )
-        self.routeRatingInput = QComboBox()
-        self.routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
-        self.routeRatingInput.setCurrentText( str( route.rating ) )
-        formLayout.addRow( QLabel( "Rating:" ), self.routeRatingInput )
-        self.routeNotesInput = QLineEdit( route.notes )
-        formLayout.addRow( QLabel( "Notes:" ), self.routeNotesInput )
-        self.routeTagsInput = QLineEdit( ", ".join( route.tags ) )
-        formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), self.routeTagsInput )
-        self._verticalLayout.addLayout( formLayout )
+        routeNameInput = QLineEdit( self.route.name )
 
+        routeDifficultyInput = QComboBox()
+        routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
+        routeDifficultyInput.setCurrentText( str( self.route.difficulty ) )
+
+        routeStyleInput = QComboBox()
+        routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
+        routeStyleInput.setCurrentText( self.route.style.name )
+
+        routeRatingInput = QComboBox()
+        routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
+        routeRatingInput.setCurrentText( str( self.route.rating ) )
+
+        routeNotesInput = QLineEdit( self.route.notes )
+        routeTagsInput = QLineEdit( ", ".join( self.route.tags ) )
+        
+        formLayout.addRow( QLabel( "Route Name:" ), routeNameInput )
+        formLayout.addRow( QLabel( "Difficulty:" ), routeDifficultyInput )
+        formLayout.addRow( QLabel( "Route Style:" ), routeStyleInput )
+        formLayout.addRow( QLabel( "Rating:" ), routeRatingInput )
+        formLayout.addRow( QLabel( "Notes:" ), routeNotesInput )
+        formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), routeTagsInput )
+        vbox.addLayout( formLayout )
+
+        def setRouteDetails():
+            self.route.name = routeNameInput.text()
+            self.route.difficulty = int( routeDifficultyInput.currentText() )
+            self.route.style = RouteStyle[ routeStyleInput.currentText() ]
+            self.route.rating = int( routeRatingInput.currentText() )
+            self.route.notes = routeNotesInput.text()
+            self.route.tags = list( map( lambda s: s.strip().lower(), routeTagsInput.text().split( ',' ) ) )
+
+        def setDetailsAndGoBack():
+            setRouteDetails()
+            self.stack.setCurrentIndex( 0 )
         buttonLayout = QHBoxLayout()
         backButton = QPushButton()
         backButton.setText( "Back" )
-        def setDetailsAndGoBack():
-            self.SetRouteDetails( route )
-            self.AddRoutePage( route )
+        backButton.setStyleSheet( "background-color : white" )
         backButton.clicked.connect( setDetailsAndGoBack )
         buttonLayout.addWidget( backButton )
-        createRouteButton = QPushButton()
-        createRouteButton.setText( "Create Route" )
+
         def setDetailsAndCreateRoute():
-            self.SetRouteDetails( route )
+            setRouteDetails()
             try:
-                routeStore.AddRoute( route )
-                self.MainMenu()
+                routeStore.AddRoute( self.route )
+                self.mainWindow.MainMenu()
             except Exception as err:
                 errorDialog = CustomDialog( "Exception Occurred", "Failed to create route: " + err.args[0] )
                 errorDialog.exec_()
+        createRouteButton = QPushButton()
+        createRouteButton.setText( "Create Route" )
+        createRouteButton.setStyleSheet( "background-color : white" )
         createRouteButton.clicked.connect( setDetailsAndCreateRoute )
         buttonLayout.addWidget( createRouteButton )
-        self._verticalLayout.addLayout( buttonLayout )
-
-    def SetRouteDetails( self, route ):
-        route.name = self.routeNameInput.text()
-        route.difficulty = int( self.routeDifficultyInput.currentText() )
-        route.style = RouteStyle[ self.routeStyleInput.currentText() ]
-        route.rating = int( self.routeRatingInput.currentText() )
-        route.notes = self.routeNotesInput.text()
-        route.tags = list( map( lambda s: s.strip().lower(), self.routeTagsInput.text().split( ',' ) ) )
-
+        
+        vbox.addLayout( buttonLayout )
+        w = QWidget()
+        w.setLayout( vbox )
+        return w
 
 # For ease of test route creation
 def Hold_S( str ):
