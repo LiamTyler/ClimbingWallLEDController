@@ -198,8 +198,21 @@ class MainRouteViewer( QWidget ):
 
     def SetupDetailsPage( self ):
         layout = QVBoxLayout()
-        layout.setAlignment( Qt.AlignCenter )
-        layout.addWidget( QLabel( "Route Details Page" ) )
+        layout.setAlignment( Qt.AlignTop )
+
+        hbox = QHBoxLayout()
+        detailsForm = RouteDetailsFormWidget( self.route )
+        def resetDetailsAndGoBack():
+            detailsForm.SetFormDetails()
+            self.ChangePage( 0 )
+        backButton = QPushButton( "Back" )
+        backButton.clicked.connect( lambda: resetDetailsAndGoBack() )
+        saveButton = QPushButton( "Save Changes" )
+        saveButton.clicked.connect( lambda: self.SaveDetailsChanges( detailsForm ) )
+        hbox.addWidget( backButton )
+        hbox.addWidget( saveButton )
+        layout.addWidget( detailsForm )
+        layout.addLayout( hbox )
         self.detailsPage.setLayout( layout )
 
     def SetupEditPage( self ):
@@ -242,6 +255,11 @@ class MainRouteViewer( QWidget ):
         self.route.holds = editWall.GetCurrentlyDrawnHolds()
         routeStore._UpdateRouteStore()
         self.viewWall.DrawRoute( self.route )
+        self.ChangePage( 0 )
+
+    def SaveDetailsChanges( self, detailsForm ):
+        detailsForm.UpdateRouteDetails()
+        routeStore._UpdateRouteStore()
         self.ChangePage( 0 )
 	
     def ChangePage( self,i ):
@@ -402,19 +420,15 @@ class RouteDetailsFormWidget( QWidget ):
         self.routeNameInput = QLineEdit( self.route.name )
 
         self.routeDifficultyInput = QComboBox()
-        self.routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
-        self.routeDifficultyInput.setCurrentText( str( self.route.difficulty ) )
-
         self.routeStyleInput = QComboBox()
-        self.routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
-        self.routeStyleInput.setCurrentText( self.route.style.name )
-
         self.routeRatingInput = QComboBox()
-        self.routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
-        self.routeRatingInput.setCurrentText( str( self.route.rating ) )
+        self.routeNotesInput = QLineEdit()
+        self.routeTagsInput = QLineEdit()
 
-        self.routeNotesInput = QLineEdit( self.route.notes )
-        self.routeTagsInput = QLineEdit( ", ".join( self.route.tags ) )
+        self.routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )  
+        self.routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )      
+        self.routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
+        self.SetFormDetails()
         
         formLayout.addRow( QLabel( "Route Name:" ), self.routeNameInput )
         formLayout.addRow( QLabel( "Difficulty:" ), self.routeDifficultyInput )
@@ -424,6 +438,13 @@ class RouteDetailsFormWidget( QWidget ):
         formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), self.routeTagsInput )
         
         self.setLayout( formLayout )
+
+    def SetFormDetails( self ):
+        self.routeDifficultyInput.setCurrentText( str( self.route.difficulty ) )
+        self.routeStyleInput.setCurrentText( self.route.style.name )
+        self.routeRatingInput.setCurrentText( str( self.route.rating ) )
+        self.routeNotesInput.setText( self.route.notes )
+        self.routeTagsInput.setText( ", ".join( self.route.tags ) )
 
     def UpdateRouteDetails( self ):
         self.route.name = self.routeNameInput.text()
