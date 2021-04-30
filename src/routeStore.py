@@ -2,6 +2,8 @@ import base64, os, pickle
 
 STORE_LOCATION = './routes.db'
 
+g_routeStore = None
+
 class RouteStore:
     def __init__( self , storeLocation=STORE_LOCATION ):
         self.fileLocation = storeLocation

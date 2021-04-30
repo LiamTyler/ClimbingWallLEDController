@@ -3,4 +3,4 @@ edit.svg: https://www.flaticon.com/authors/kirill-kazachek
 trash.svg: https://www.flaticon.com/authors/kiranshastry
 trash_2.svg: https://www.flaticon.com/authors/dmitri13
 details.svg and paper.svg: https://www.flaticon.com/authors/freepik
-magnify.svg: https://www.flaticon.com/authors/pixel-perfect
+magnify.svg and menu.svg: https://www.flaticon.com/authors/pixel-perfect
