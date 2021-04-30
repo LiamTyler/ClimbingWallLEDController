@@ -360,44 +360,13 @@ class CreateRouteView( QWidget ):
         return w
 
     def SetupAddDetailsPage( self ):
+        self.route = Route()
+        detailsForm = RouteDetailsFormWidget( self.route )
         vbox = QVBoxLayout()
-
-        formLayout = QFormLayout()
-        routeNameInput = QLineEdit( self.route.name )
-
-        routeDifficultyInput = QComboBox()
-        routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
-        routeDifficultyInput.setCurrentText( str( self.route.difficulty ) )
-
-        routeStyleInput = QComboBox()
-        routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
-        routeStyleInput.setCurrentText( self.route.style.name )
-
-        routeRatingInput = QComboBox()
-        routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
-        routeRatingInput.setCurrentText( str( self.route.rating ) )
-
-        routeNotesInput = QLineEdit( self.route.notes )
-        routeTagsInput = QLineEdit( ", ".join( self.route.tags ) )
-        
-        formLayout.addRow( QLabel( "Route Name:" ), routeNameInput )
-        formLayout.addRow( QLabel( "Difficulty:" ), routeDifficultyInput )
-        formLayout.addRow( QLabel( "Route Style:" ), routeStyleInput )
-        formLayout.addRow( QLabel( "Rating:" ), routeRatingInput )
-        formLayout.addRow( QLabel( "Notes:" ), routeNotesInput )
-        formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), routeTagsInput )
-        vbox.addLayout( formLayout )
-
-        def setRouteDetails():
-            self.route.name = routeNameInput.text()
-            self.route.difficulty = int( routeDifficultyInput.currentText() )
-            self.route.style = RouteStyle[ routeStyleInput.currentText() ]
-            self.route.rating = int( routeRatingInput.currentText() )
-            self.route.notes = routeNotesInput.text()
-            self.route.tags = list( map( lambda s: s.strip().lower(), routeTagsInput.text().split( ',' ) ) )
+        vbox.addWidget( detailsForm )
 
         def setDetailsAndGoBack():
-            setRouteDetails()
+            detailsForm.UpdateRouteDetails()
             self.stack.setCurrentIndex( 0 )
         buttonLayout = QHBoxLayout()
         backButton = QPushButton()
@@ -407,7 +376,7 @@ class CreateRouteView( QWidget ):
         buttonLayout.addWidget( backButton )
 
         def setDetailsAndCreateRoute():
-            setRouteDetails()
+            detailsForm.UpdateRouteDetails()
             try:
                 routeStore.AddRoute( self.route )
                 self.mainWindow.MainMenu()
@@ -424,6 +393,45 @@ class CreateRouteView( QWidget ):
         w = QWidget()
         w.setLayout( vbox )
         return w
+
+class RouteDetailsFormWidget( QWidget ):
+    def __init__( self, route ):
+        super().__init__()
+        self.route = route
+        formLayout = QFormLayout()
+        self.routeNameInput = QLineEdit( self.route.name )
+
+        self.routeDifficultyInput = QComboBox()
+        self.routeDifficultyInput.addItems( [ str( i ) for i in range( 11 ) ] )
+        self.routeDifficultyInput.setCurrentText( str( self.route.difficulty ) )
+
+        self.routeStyleInput = QComboBox()
+        self.routeStyleInput.addItems( list( map( lambda rs: rs.name, RouteStyle ) ) )
+        self.routeStyleInput.setCurrentText( self.route.style.name )
+
+        self.routeRatingInput = QComboBox()
+        self.routeRatingInput.addItems( [ str( i ) for i in range( 6 ) ] )
+        self.routeRatingInput.setCurrentText( str( self.route.rating ) )
+
+        self.routeNotesInput = QLineEdit( self.route.notes )
+        self.routeTagsInput = QLineEdit( ", ".join( self.route.tags ) )
+        
+        formLayout.addRow( QLabel( "Route Name:" ), self.routeNameInput )
+        formLayout.addRow( QLabel( "Difficulty:" ), self.routeDifficultyInput )
+        formLayout.addRow( QLabel( "Route Style:" ), self.routeStyleInput )
+        formLayout.addRow( QLabel( "Rating:" ), self.routeRatingInput )
+        formLayout.addRow( QLabel( "Notes:" ), self.routeNotesInput )
+        formLayout.addRow( QLabel( "Tags (Comma-Separated):" ), self.routeTagsInput )
+        
+        self.setLayout( formLayout )
+
+    def UpdateRouteDetails( self ):
+        self.route.name = self.routeNameInput.text()
+        self.route.difficulty = int( self.routeDifficultyInput.currentText() )
+        self.route.style = RouteStyle[ self.routeStyleInput.currentText() ]
+        self.route.rating = int( self.routeRatingInput.currentText() )
+        self.route.notes = self.routeNotesInput.text()
+        self.route.tags = list( map( lambda s: s.strip().lower(), self.routeTagsInput.text().split( ',' ) ) )
 
 # For ease of test route creation
 def Hold_S( str ):
